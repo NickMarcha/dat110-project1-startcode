@@ -47,16 +47,22 @@ public class RPCServer {
 
 			// - lookup the method to be invoked
 			byte[] reply = null;
+			
 			if(services.containsKey(rpcid)) {
+				
 				// - invoke the method
 				reply = services.get(rpcid).invoke(msg.getData());
+			}else {
+				
+				reply = new byte[1];
+				reply[0] = 0;
 			}
 
 
 			// - send back message containing RPC reply
-			if(reply != null) {
-				connection.send(new Message(reply));
-			}
+			
+			connection.send(new Message(reply));
+			
 
 			if (rpcid == RPCCommon.RPIDSTOP) {
 				stop = true;

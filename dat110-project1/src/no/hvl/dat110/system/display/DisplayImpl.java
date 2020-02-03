@@ -14,7 +14,7 @@ public class DisplayImpl implements RPCImpl {
 	
 	public byte[] invoke(byte[] request) {
 		
-		int temp =  RPCUtils.unmarshallInteger(request);
+		String temp =  RPCUtils.unmarshallString(request);
 		
 		
 		byte rpcid = request[0];

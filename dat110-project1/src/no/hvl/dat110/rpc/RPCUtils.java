@@ -1,6 +1,7 @@
 package no.hvl.dat110.rpc;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Arrays;
 
 import no.hvl.dat110.TODO;
@@ -82,7 +83,7 @@ public class RPCUtils {
 
 		byte[] encoded;
 
-		byte[] intBytes = ByteBuffer.allocate(4).putInt(x).array();
+		byte[] intBytes = ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putInt(x).array();
 		
 		encoded = new byte[intBytes.length + 1];
 		
@@ -100,7 +101,7 @@ public class RPCUtils {
 		// TODO: unmarshall integer contained in data
 
 		byte[] intBytes = Arrays.copyOfRange(data, 1, data.length);
-		decoded = ByteBuffer.wrap(intBytes).getInt();
+		decoded = ByteBuffer.wrap(intBytes).order(ByteOrder.BIG_ENDIAN).getInt();
 
 		return decoded;
 

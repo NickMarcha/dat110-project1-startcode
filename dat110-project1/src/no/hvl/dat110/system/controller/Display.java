@@ -16,6 +16,6 @@ public class Display extends RPCStub {
 		 
 		 byte[] receiveBytes = rpcclient.call(sendBytes);
 		 
-		 System.out.println(RPCUtils.unmarshallString(receiveBytes));
+		
 	}
 }
