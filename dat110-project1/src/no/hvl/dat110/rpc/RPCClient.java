@@ -1,6 +1,5 @@
 package no.hvl.dat110.rpc;
 
-import no.hvl.dat110.TODO;
 import no.hvl.dat110.messaging.*;
 
 public class RPCClient {
@@ -19,7 +18,7 @@ public class RPCClient {
 	
 	public void connect() {
 		
-		// TODO: connect using the underlying messaging layer connection
+		//  connect using the underlying messaging layer connection
 		
 	   connection = msgclient.connect();
 			
@@ -36,7 +35,7 @@ public class RPCClient {
 		
 		byte[] rpcreply;
 		
-		/* TODO: 
+		/* 
 		
 		Make a remote call on the RPC server by sending the RPC request message
 		and receive an RPC reply message
@@ -46,8 +45,8 @@ public class RPCClient {
 		
 		*/
 		
-		connection.send(new Message(rpcrequest));
-		Message reply = connection.receive();
+		connection.send(new UnboundedMessage(rpcrequest));
+		UnboundedMessage reply = connection.receive();
 		rpcreply = reply.getData();
 		
 		return rpcreply;

@@ -5,7 +5,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 
-import no.hvl.dat110.TODO;
 
 public class Connection {
 
@@ -30,43 +29,44 @@ public class Connection {
 		}
 	}
 
-	public void send(Message message) {
+	public void send(UnboundedMessage message) {
 
-		// TODO
 		// encapsulate the data contained in the message and write to the output stream
 		// Hint: use the encapsulate method on the message
 		
 		try {
 			outStream.write(message.encapsulate());
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
 	}
 
-	public Message receive() {
-		Message message = new Message();
+	public UnboundedMessage receive() {
+		// read a segment (128 bytes) from the input stream and decapsulate into message
+				// Hint: create a new Message object and use the decapsulate method
+		UnboundedMessage message = new UnboundedMessage();
 		
 		try {
-			byte[] recvbuf = inStream.readNBytes(128);
-			message.decapsulate(recvbuf);
+			byte[] recvbuflength = inStream.readNBytes(4);
+			
+			int messageLength = UnboundedMessage.UnmarshallInt(recvbuflength);
+			//System.out.println("ML:" + messageLength);
+		
+			byte[] recvbuf = inStream.readNBytes(messageLength);
+			
+			byte[] combinedRecBuff = new byte[messageLength + 4];
+			
+			System.arraycopy(recvbuflength, 0, combinedRecBuff, 0, recvbuflength.length); 
+			System.arraycopy(recvbuf, 0, combinedRecBuff, recvbuflength.length, recvbuf.length);
+			
+			
+			message.decapsulate(combinedRecBuff);
 			
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
-		
-
-		// TODO
-		// read a segment (128 bytes) from the input stream and decapsulate into message
-		// Hint: create a new Message object and use the decapsulate method
-		
-		
-
 		return message;
-
 	}
 
 	// close the connection by closing streams and the underlying socket

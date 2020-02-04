@@ -4,7 +4,6 @@ import java.io.IOException;
 
 import java.net.Socket;
 
-import no.hvl.dat110.TODO;
 
 public class MessagingClient {
 
@@ -22,7 +21,6 @@ public class MessagingClient {
 		Socket clientSocket;
 		Connection connection = null;
 
-		// TODO
 		// create TCP socket for client and connection
 		// create connection object
 		try {
@@ -30,7 +28,6 @@ public class MessagingClient {
 			connection = new Connection(clientSocket);
 			
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		

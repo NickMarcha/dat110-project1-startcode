@@ -4,8 +4,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
 
-import no.hvl.dat110.TODO;
-
 public class RPCUtils {
 
 	// Utility methods for marshalling and marshalling of parameters and return values
@@ -17,7 +15,7 @@ public class RPCUtils {
 
 		byte[] encoded;
 
-		// TODO: marshall RPC identifier and string into byte array
+		// marshall RPC identifier and string into byte array
 
 		byte[] stringBytes = str.getBytes();
 		
@@ -33,7 +31,7 @@ public class RPCUtils {
 
 		String decoded;
 
-		// TODO: unmarshall String contained in data into decoded
+		// unmarshall String contained in data into decoded
 
 		byte[] stringBytes = Arrays.copyOfRange(data, 1, data.length);
 		decoded = new String(stringBytes);
@@ -45,7 +43,7 @@ public class RPCUtils {
 
 		byte[] encoded;
 
-		// TODO: marshall RPC identifier in case of void type
+		// marshall RPC identifier in case of void type
 		encoded = new byte[1];
 		encoded[0] = rpcid;
 
@@ -55,7 +53,7 @@ public class RPCUtils {
 
 	public static void unmarshallVoid(byte[] data) {
 
-		// TODO: unmarshall void type
+		//  unmarshall void type
 	}
 
 	public static byte[] marshallBoolean(byte rpcid, boolean b) {
@@ -98,7 +96,7 @@ public class RPCUtils {
 
 		int decoded;
 
-		// TODO: unmarshall integer contained in data
+		// unmarshall integer contained in data
 
 		byte[] intBytes = Arrays.copyOfRange(data, 1, data.length);
 		decoded = ByteBuffer.wrap(intBytes).order(ByteOrder.BIG_ENDIAN).getInt();

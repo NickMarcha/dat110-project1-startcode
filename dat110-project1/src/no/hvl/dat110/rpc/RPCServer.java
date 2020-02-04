@@ -2,10 +2,9 @@ package no.hvl.dat110.rpc;
 
 import java.util.HashMap;
 
-import no.hvl.dat110.TODO;
 import no.hvl.dat110.messaging.Connection;
-import no.hvl.dat110.messaging.Message;
 import no.hvl.dat110.messaging.MessagingServer;
+import no.hvl.dat110.messaging.UnboundedMessage;
 
 public class RPCServer {
 
@@ -39,9 +38,8 @@ public class RPCServer {
 
 			int rpcid;
 
-			// TODO
 			// - receive message containing RPC request
-			Message msg = connection.receive();
+			UnboundedMessage msg = connection.receive();
 			// - find the identifier for the RPC methods to invoke
 			rpcid = msg.getData()[0];
 
@@ -61,7 +59,7 @@ public class RPCServer {
 
 			// - send back message containing RPC reply
 			
-			connection.send(new Message(reply));
+			connection.send(new UnboundedMessage(reply));
 			
 
 			if (rpcid == RPCCommon.RPIDSTOP) {
