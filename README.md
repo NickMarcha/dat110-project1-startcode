@@ -1,173 +1,381 @@
-## DAT110 - Project 1: Socket Programming and RPC middleware
-
-The tasks related to this project will be part of the lab exercises in weeks 5 and 6. The first task can be completed now based on the knowledge you have gained in the lectures on the TCP/IP protocol stack and network programming using sockets. The subsequent tasks involve topics that will be covered in the lectures in the beginning of week 6.
-
-Please note that there is no lecture on Wednesday in week 5. Use the time to get a head start on task 1 and 2 of the project.
+## DAT110 - Project 2: Publish-subscribe messaging middleware
 
 ### Organisation
 
-The project is to be undertaken in **groups of 2-3 students**.
+Weeks 9 and 10 are devoted to project work which is to be undertaken in **groups of 2-4 students**. Discussions among the groups are allowed, but the code handed in by the group should be the work of the group members - and not members of other groups.
 
-You are strongly encouraged to use the [discussion forum](https://hvl.instructure.com/courses/10943/discussion_topics/74045) in Canvas throughout the project if you encounter issues or have questions related to the project.
-
-The project is to be handed in at the beginning of week 7 (see deadline in Canvas).
+There will be no lectures on Wednesday 26/2, but there will be labs at the normal time-slots in week 9. You are also encouraged to use the [discussion forum](https://hvl.instructure.com/courses/10943/discussion_topics/74045) in Canvas throughout the project weeks.
 
 ### Overview
 
-The project builds on socket programming and network applications and aims to consolidate important concepts in the course: layering, services, protocols, headers, encapsulation/decapsulation, remote procedure calls (RPC), and marshalling/unmarshalling.
+The aim of the project is to implement a publish-subscribe messaging-oriented middleware (PB-MOM) on top of the TCP-based message transport layer from project 1.
 
-The goal of the project is to implement a small IoT system consisting of a temperature sensor application, a controller application, and a display application. The controller is to request the current temperature from the temperature sensor and then request the display to show the temperature. The overall system is illustrated below.
+You are **not** required to implement the messaging transport layer, but you are given an implementation if it as part of the start code. There should not be any need to directly use TCP/UDP transport services and socket programming, only indirectly via the provided message transport service implementation.
 
-![](assets/markdown-img-paste-20200124152600673.jpg)
+You are assumed to have read Chapter 4 (Communication) in the distributed systems book and be familiar with the concepts of publisher clients, subscriber clients, topics, and brokers. You are also assumed to be familiar with the service provided by the message transport layer that we implemented as part of project 1.
 
-At the very base, the communication between the three applications is to be based on the TCP transport service using sockets. For programming convenience we want to implement the application using a distributed systems middleware abstraction called remote procedure calls (RPC).
+The client-side of the PB-MOM consists of *publishers and subscribers* that can create/delete topics, subscribe/unsubscribe to *topics*, and *publish* messages to topics. When a publisher publishes a message on a given topic, then all currently connected clients subscribing to the topic is to receive the message.
 
-One **key advantage** of RPC as an abstraction mechanism is that we can program the networked application using what seems to be ordinary method calls even if the body of the method is in fact executed on a remote machine. With the RPC middleware in place, the main loop of the controller can be implemented as follows:
+The figure below gives an overview of the PB-MOM that is to be implemented:
 
-```java
-for (int i = 0; i<N;i++) {
+![](assets/markdown-img-paste-20200218140925961.jpg)
 
-  int temp = sensor.read();
-  display.write(Integer.toString(temp));
+The server-side is comprised of a *Broker* that manages the connected clients (publishers and subscribers), topics and subscriptions, and which acts as an intermediate responsible for publishing messages to the subscribers of a given topic.  
 
-  [...]
-}
-```
-where the actual reading of the temperature and writing on the display takes place in a different application via the RPC middleware.
+The project is comprised of the following main tasks:
 
-To break up the complexity of providing the RPC middleware, we will implement a layered client-server software architecture comprised of three layers as illustrated below.
+**Task A.** Implement classes for the messages to be used in the publish-subscribe protocol between clients and the broker.
 
-![](assets/markdown-img-paste-20200124152521421.jpg)
+**Task B.** Implement the storage of topics and subscriptions in the broker, and the dispatcher responsible for processing of publish-subscribe messages received from connected clients.
 
-This in turn means that the project is comprised of three main tasks
+**Task C.** Application of the PB-MOM for implementing a small IoT system in which a sensor (client) publishes the current temperature on a temperature topic to which a display (client) is subscribing (see also lab-exercises from earlier weeks and project 1).
 
-1. Implementation of a messaging layer on top of TCP sockets for exchanging short messages between a messaging client and a messaging server
-2. Implementation of a light-weight RPC layer and distributed systems middleware on top of the messaging layer
-3. Application of the RPC layer for realising a small IoT network application comprised of a sensor, and display, and a controller
+**Task D.** Experiment with PB-MOM for implementing the ChApp (Chat Social Network Application) where users can send short messages to each other via topics similar to what is found in may social network applications.
+
+**Task E.** Extend the broker such that if a subscribing client is currently disconnected and later reconnects, then the client will be provided with the messages that may have been published on the topic while the client was disconnected.
+
+**Task F.** Extend the broker from being single-threaded to being multi-threaded having a dispatcher thread for handling each connected client.
+
+**It is only required to do one of the tasks E or F - and not both.**
 
 ### Getting Started
 
-You should start by cloning the Java start-code to be found in the github repository at
+You should start by cloning the Java code which can be found in the github repository
 
-https://github.com/selabhvl/dat110-project1-startcode.git
+https://github.com/selabhvl/dat110-project2-startcode.git
 
-containing an Eclipse-project with start-code. In addition, you should also clone the following project:
-
-https://github.com/selabhvl/dat110-project1-testing
-
-which contains a number of unit tests that can be used for some basic testing of the implemented functionality. These tests are by no means complete, and when running the test you should also check in the Eclipse console that no exceptions are raised when running the tests.
-
-It should not be necessary to add additional classes in order to complete the project. The unit-tests should not be modified as they will be used for evaluation of the submitted solution.
+which contains an Eclipse-project with start-code.
 
 In order for the group to use their own git-repository for the further work on the codebase, one member of the group must create an empty repository on github/bitbucket without a README file and without a `.gitignore` file, and then perform the following operations
 
 `git remote remove origin`
 
-`git remote add origin <url-to-the-new-empty-repository>`
+`git remote add origin <url-to-new-empty-repository>`
 
 `git push -u origin master`
 
-The other group members can now clone this new repository and the group can work with a shared repository as usual.
+The other group members can now clone this new repository and work with a shared repository as usual.
 
-### Task 1: Messaging layer
+In addition, you should also clone the following project:
 
-The messaging layer is to be implemented on top of TCP sockets and provide a service for connection-oriented, reliable, and bidirectional exchange of (short) messages carrying up to 127 bytes of data/payload. The messaging layer is to be based on a client-server architecture supporting a client in establishing a connection to a server on top of which the messages can be exchanged.
+https://github.com/selabhvl/dat110-project2-testing
 
-This is illustrated in the figure below which shows the messaging layer connection for exchange of messages on top of the TCP connection supporting a bidirectional bytestream. The boxes between the transport and messaging layers represents TCP sockets.
+which contains a number of unit tests that can be used for some basic testing of the implemented functionality. These tests are by no means complete, and when running the test you should also check in the Eclipse console that no exceptions are raised when running the tests.
 
-![](assets/markdown-img-paste-20200124152450204.jpg)
+**NOTE:** When opening the projects in Eclipse, there will be some compile-errors. These will go away as you complete the implementation of the tasks below.
 
-The messaging protocol is based on sending fixed-sized *segments* of 128 bytes on the underlying TCP connection. The basic idea is that the first byte of the segment is to be interpreted as an integer in the range 0..127 specifying how many of the subsequent 127 bytes is payload data. Any remaining bytes is simply considered padding and can be ignored.
+### Task A: Publish-subscribe Protocol Messages
 
-The figure below shows the syntax of the message format to be used in the messaging layer
+The messages to be exchanged between the clients and the broker is to be defined as classes in the `no.hvl.dat110.messages` package. The base message class is `Message` and all message classes must be subclasses of this class. All messages will contain information about a `user` and have a `type` as defined in `MessageType.java`. The `user` is assumed to uniquely identify a connected client.
 
-![](assets/markdown-img-paste-20200124152430675.jpg)
+The communication between the client and the broker is to be based on the message transport layer/service implemented as part of project 1. An implementation of this layer is provided a part of the start-code in the `no.hvl.dat110.messagetransport` package.
 
-The implementation of the messaging service is to be located in the `no.hvl.dat110.messaging` package.
+The `no.hvl.dat110.messages` already contains classes implementing the following messages for the publish-subscribe protocol:
 
-You are required to implement the methods marked with `TODO` in the following classes
+- [`ConnectMsg.java`](https://github.com/selabhvl/dat110-project2-startcode/blob/master/src/no/hvl/dat110/messages/ConnectMsg.java) - sent by the client as the first message after having established the underlying message transport connection to the broker.
 
-- `Message.java` implementing methods for encapsulation and decapsulation of payload data according to the segment format described above.
+- `DisconnectMsg.java` - sent from the client in order to disconnect from the broker.
 
-- `Connection.java` implementing the connection abstraction linking the connection to the underlying TCP socket and associated input and output data streams that is to be used for sending and receiving message.
+You are required to complete the implementation of the remaining message-classes.
 
-- `MessagingClient.java` implementing the methods for the client-side of the messaging service and responsible for creating the underlying TCP socket on the client-side.
+- [`CreateTopicMsg.java`](https://github.com/selabhvl/dat110-project2-startcode/blob/master/src/no/hvl/dat110/messages/CreateTopicMsg.java) - sent by the client in order to have the broker create a `topic`. A topic is to be identified by means of a `String`
 
-- `MessagingServer.java` implementing the methods for the server-side of the messaging service. In the current project, a server is only required to handle a single connection from a client.
+- `DeleteTopicMsg.java` - sent by the client in order to have a `topic` deleted.
 
-Unit-tests for the messaging layer can be found in the `no.hvl.dat110.messaging.tests` package in the Eclipse testing project.
+- `SubscribeMsg.java` - sent by the client in order to subscribe to a `topic`.
 
-**Optional challenge:** If you have time, you may consider implementing a messaging protocol that supports the exchange of arbitrarily long messages and without the use of padding.
+- `UnsubscribeMsg.java` - sent by the client in order to unsubscribe from a `topic`.
 
-### Task 2: RPC layer
+- `PublishMsg.java` - sent by the client in order to publish a `message` (`String`) on a topic and sent by the broker in order to deliver the message to subscribed clients.
 
-In this task you will implement a light-weight RPC middleware on top of the messaging layer. The RPC layer is also based on a client-server architecture in which the client-side is able to perform remote procedure calls on objects located on the server-side.
+You must determine what object variables are needed in the classes. The message-classes must have a constructor that can give a value to all object-variables, getter/setter methods for all object-variables, and they must implement a `toString`-method to be used for logging purposes.
 
-The basic idea of RPC is that a process can execute method (procedure) calls over the network on remote objects residing inside other processes. This is illustrated in the figure below in which a client invokes a method on a local-object (also called a stub/proxy) object while actual execution of the body of the method takes place in the remote object located on another machine and implementing the actual functionality of the method
+There are no tests available for testing your implementation of the message-classes, but the classes will be tested as part of the tests in Task B below.
 
-![](assets/markdown-img-paste-20200124152725863.jpg)
+### Task B: Broker Implementation
 
-The RPC client middleware marshalles the parameters of the method into a request message which is then sent to the RPC server middleware. The RPC server middleware inspects the received request and executes the method being called. As the last step, the server marshalls the return value and sends it back to the RPC client middleware which can then return the result of the remote method call.  A detailed description of remote procedure calls can be found in **Chap. 4.2** of the distributed systems book.
+The figure below gives an overview of the implementation of the broker server. The `Broker` uses an underlying `MessagingServer` (from the messaging layer) to accept new message connections from clients. It then hands off these connections to the `Dispatcher` which is responsible for processing incoming messages on the connections using the information stored in the `Storage`.
 
-The RPC middleware is light-weight in that only the types `void`, `String`, `int`, and `boolean` is supported as parameter and return types, and the methods supported can have at most one parameter. Furthermore, the middleware does not support automatic generation of stub-code and the marshalling and unmarshalling of parameters and return values. The (un)marshalling will have to be implemented manually by the developer using the RPC middleware. Finally, it is assumed that the marshalled parameter and return values can be represented using at most 127 bytes.
+![](assets/markdown-img-paste-20200218140610451.jpg)
 
-To perform a call, the client-side stub must send a request message containing first a byte specifying the identifier of the remote procedure call to be invoked on the server-side. The subsequent bytes in the request is then a sequence of bytes resulting from the marshalling and representing the method parameter (if any). When receiving the request, the server-side uses the identifier to perform a look-up in a table to find the correct RPC method to invoke. Before invoking the method, the parameter (if any) must be unmarshalled on the server-side. After having invoked the method, any return value must be marshalled and then sent back to the client-side in a reply message where the first byte (again) specifies the executed method. Finally, the client-side have to unmarshall the return value (if any).
+The implementation of the broker can be found in the `no.hvl.dat110.broker` package. You will have to study the code of the broker which is comprised of the following subclasses
 
-The format of the request message (which method and parameter value) and response message (return value) is shown in the figure below.
+- [`ClientSesssion.java`](https://github.com/selabhvl/dat110-project2-startcode/blob/master/src/no/hvl/dat110/broker/ClientSession.java) used to represent a *session* with a currently connected client on the broker side. Whenever a client (user) connects, a corresponding `ClientSession`-object will be created on the broker-side representing the underlying message transport connection. The methods in this class must be used when the broker is to receive and send messages to a connected client.
 
-![](assets/markdown-img-paste-20200124154447804.jpg)
+- `Storage.java` which is to implement the storage of currently connected clients and manage the subscription of clients (users) to topics. **You will complete the implementation of this class in Task B.1 below.**
 
-The implementation of the RPC layer is to be located in the `no.hvl.dat110.rpc` package. You are required to provide the missing method implementations in the following classes
+- `BrokerServer.java` which contains the `main`-method of the broker. It is responsible for starting up the server and creating the storage and dispatcher of the broker.
 
-- `RPCUtils.java` containing utility methods for the unmarshalling and marshalling of the supported data types. The implementation of the marshalling/unmarshalling of `booleans` is provided and can be used for inspiration. Remember that an integer in Java is 4 bytes.
+- `Broker.java` implementing a `Stopable`-thread abstraction. The `doProcess`-methods of the broker runs in a loop accepting incoming message transport connections (sessions) from clients.
 
-- `RPCClient.java` implementing the client-side of the RPC layer using the client-side of the underlying messaging layer for communication.
+- `Dispatcher.java` implementing a `Stopable`-thread that is responsible for processing the messages received from clients. The `doProcess()`-methods of the dispatcher in turn checks (polls) the client sessions for incoming messages and then invokes the `dispatcher`-method which, depending on the type of received message, will invoke the corresponding handler method. **You will complete the implementation of the dispatcher in Task B.2 below.**
 
-- `RPCServer.java` implementing the server-side of the RPC layer using the server-side of the underlying messaging layer for communication. The server also contains a hash-map which is used to register classes containing methods for remote method calls (invocation).
+Both the *Broker* and the *Dispatcher* runs as Stopable-threads as implemented by the Stopable-class in [`Stopable.java`](https://github.com/selabhvl/dat110-project2-startcode/blob/master/src/no/hvl/dat110/common/Stopable.java):
 
-Unit-tests for the RPC utilities can be found in the `TestRPCUtils.java` class and unit-tests testing the remote procedure call mechanism can be found in the `TestRPC.java` class.  
+```java
+public abstract class Stopable extends Thread {
 
-In addition to the three classes above, the RPC layer contains the following
+	private boolean stop = false;
+	protected String name;
 
-- `RPCImpl.java` specifying an interface containing an `invoke` method that any server-side class exposing a remote method **must implement**. This `invoke` method should handle the unmarshalling of the parameters, then call the real underlying remote method implementation, and finally marshall the return value. It is this `invoke`-method that the RPC server will call in order to have the RPC call executed.
+	public Stopable(String name) {
+		this.name = name;
+	}
 
-- `RPCStub.java` implementing a `register` method that allows a client-side stub to be registered in the RPC middleware. Any client-side stub must extend this class and implement the client-side stub. This is required in order for the stub-implementation to be able to use the `call`-method of the RPC client-side middelware in order to execute the call.
+	public synchronized void doStop() {
+		stop = true;
+	}
 
-- `RPCServerStopImpl.java` implementing the server-side of a remote method `void stop()` which the client-side can use to terminate the server. The class illustrates the server-side implementation of an RPC method and how first parameters must be unmarshalled, then the underlying method called, and then the marshalling of the return value.
+	private synchronized boolean doCont() {
+		return !stop;
+	}
 
-- `RPCServerStopStub.java` implementing the client-side stub of the remote method `void stop()`. The class illustrates the client-side implementation of an RPC method showing how first parameters are marshalled, then the RPC layer is asked to execute the call, and finally the return must be unmarshalled.
+	public abstract void doProcess();
 
-The `void stop()` method should be considered an internal RPC method and uses RPC identifier 0. This (reserved) identifier should not be used when implementing other RPC methods using the RPC layer.
+	public void run() {
 
-**Optional challenges:** If you have time, you may consider implementing an RPC layer where methods can have more than a single parameter. Also, you may investigate how to implement the automatic code generation of the client-side and server-side stub-code which would be a first step towards supporting arbitrary Java-objects as parameter and return types. Finally, you may consider making the RPC server multi-threaded such that multiple simultaneous clients can be handled.
+		Logger.log(name + " running");
 
-### Task 3: Using the RPC layer for an IoT network application
+		while (doCont()) {
+			doProcess();		
+		}
 
-In this task you will use the RPC layer to implement the IoT system comprised of a controller, a (temperature) sensor, and a display. The controller should play the role of an RPC client while the sensor and display take the role of RPC servers.
+		Logger.log(name + " stopping");
 
-The controller should regularly retrieve the current temperature using a `int read()` RPC call on the sensor and then use a `void write(String str)` RPC call on the display to show the current temperature. The principle is illustrated in the figure below.
+	}
+}
+```
+The classes `StopableExample.java` and `StopableExampleMain.java` contains an example of use of Stopable-thread abstraction.
 
-![](assets/markdown-img-paste-20200124154533252.jpg)
+#### Task B.1 Broker Storage
 
-#### Controller implementation
+The class [`Storage.java`](https://github.com/selabhvl/dat110-project2-startcode/blob/master/src/no/hvl/dat110/broker/Storage.java) of the broker implements an in-memory storage where the broker can store information about connected clients and the subscription of user (clients) to topics. The start of the class is already provided:
 
-The implementation of the controller is to be provided in the `no.dat110.system.controller` package. You must implement the code missing in the following classes
+```java
+public class Storage {
 
-- `Display.java` - here you have to implement the client-side stub of the  `void write(String str)` RPC method. See the `RPCServerStopStub.java`for inspiration.
+	private ConcurrentHashMap<String, Set<String>> subscriptions;
+	private ConcurrentHashMap<String, ClientSession> clients;
 
-- `Sensor.java` - here you have to implement the client-side stub for the `int read()` RPC method.
+	public Storage() {
+		subscriptions = new ConcurrentHashMap<String, Set<String>>();
+		clients = new ConcurrentHashMap<String, ClientSession>();
+	}
+ [...]
+```
 
-- `Controller.java` - here you have to implement the creation of the client-side stubs and the registration of the stubs in the middleware. Finally, the controller must connect to the sensor and display RPC servers and implement a bounded-loop in which the temperature is retrieved from the sensor (using the read method) and shown on the display (using the write method).
+The basic idea is to use a hash-map mapping from topics (`String`) to a set of users (`String`) for managing which users are subscribed to which topics. Similarly, the currently connected clients are stored in a hash-map mapping from a user (`String`) to a `ClientSession`-object representing the connection/session with the client.
 
-#### Display implementation
+The broker data model for the storage is illustrated below
 
-The implementation of the display is in the `no.hvl.dat110.system.display` package. You must implement the server-side of the `write` RPC method in the `DisplayImpl.java` and the display server in the `DisplayDevice.java` class.  You may use the sensor server implementation in `SensorDevice.java` and `SensorImpl` for inspiration.
+![](assets/markdown-img-paste-20200218140526335.jpg)
 
-#### Sensor implementation
+You are required to complete the implementation of the following methods in [Storage.java]( https://github.com/selabhvl/dat110-project2-startcode/blob/master/src/no/hvl/dat110/broker/Storage.java)
 
-The implementation of the sensor is in the `no.hvl.dat110.system.sensor` package and can be used as inspiration for the implementation of the display.
+- `public void addClientSession(String user, Connection connection)`
 
-If everything has been implemented correctly, you should not be able to start the display-device and sensor-device, and then the controller and see the reporting temperatures in the console. The test in `TestSystem.java` contains a test that runs all devices within the same JVM using threads. You can run the devices in separate JVMs by running the individual devices as a Java application (they each have a main method).
+- `public void removeClientSession(String user)`
+
+- `public void createTopic(String topic)`
+
+- `public void deleteTopic(String topic)`
+
+- `public void addSubscriber(String user, String topic)`
+
+- `public void removeSubscriber(String user, String topic)`
+
+- `public Set<String> getSubscribers(String topic)`
+
+The TODO-comments in `Storage.java` class provides more detailed information about what the individual methods are supposed to do.
+
+The package `no.hvl.dat110.broker.storage.tests` in the `dat110-prosject2-testing` project contains some basic unit tests that can be used to test the implementation of the storage methods.
+
+#### Task B.2 Broker Dispatcher for Message Processing
+
+All communication between the broker and the connected clients will be done via the `send`, `receive`, and `hasData`-methods of the corresponding `ClientSession`-object. The encapsulation of the underlying message transport connection has been already implemented in the `ClienSession.java` class.
+
+The messages exchanged between the broker and the client will be a JSON-representation of the objects of the message-classes implemented in Task A.  As an example, a `ConnectMsg`-object will be represented as follows:
+
+```java
+{"type":"CONNECT","user":"testuser"}
+```
+
+The conversion to/from the JSON format has already been implemented using the [gson-library](https://github.com/google/gson) library in the `MessageUtils.java` class.
+
+The aim of this task it to implement the broker-side processing of the messages received from clients in the `Dispatcher.java` class. The `doProcess`-method of the dispatcher runs in a loop where it in turn checks the current client sessions for an incoming message using the `hasData`-method. If the client has sent a message, then it will invoke the `dispatch`-method which in turn will invoke a method named on the form `onX` for a processing a message of type `X`.
+
+The dispatcher contains an implementation of the `onConnect` and on `onDisconnect`-methods. Your task is to complete the implementation of the remaining methods in [Dispatcher.java](https://github.com/selabhvl/dat110-project2-startcode/blob/master/src/no/hvl/dat110/broker/Dispatcher.java)
+
+- `public void onCreateTopic(CreateTopicMsg msg)`
+
+- `public void onDeleteTopic(DeleteTopicMsg msg)`
+
+- `public void onSubscribe(SubscribeMsg msg)`
+
+- `public void onUnsubscribe(UnsubscribeMsg msg)`
+
+- `public void onPublish(PublishMsg msg)`
+
+in order to be able to also process the remaining types of messages.
+
+The tests found in the `no.hvl.dat110.broker.processing.tests` package can be used to test the implemented methods.
+
+**Please Note** that the tests in the package will have to be run one at a time as they are using the same TCP/IP port for the broker.
+
+### Task C: IoT sensor-display application
+
+In this task you will use the PB-MOM middleware to implement a small IoT system comprised of a (temperature) sensor, and a display.
+
+The start of the implementation of the IoT-system can be found in the `no.hvl.dat110.iotsystem` package.
+
+The class [Client.java](https://github.com/selabhvl/dat110-project2-startcode/blob/master/src/no/hvl/dat110/client/Client.java) contains an implementation of the methods needed for implementing the sensor and display clients that can connect to the broker. The class Common.java contains the port number that can be used for connecting clients to the broker server.
+
+The principle of the sensor-display application is shown below
+
+![](assets/markdown-img-paste-2020021814081969.jpg)
+
+#### Sensor device implementation
+
+The skeleton of the sensor device implementation can be found in the `SensorDevice.java` class. You are required to
+complete the implementation such that the sensor device connects to a broker, runs in a loop `COUNT`-times where it publishes to a *temperature* topic. After that the sensor device should disconnect from the broker.
+
+#### Display device implementation
+
+The skeleton of the display device implementation can be found in the `DisplayDevice.java` class. You are required to complete the implementation of the display device such that it connects to the same broker as the sensor device, creates a *temperature* topic, subscribes to this topic and then receives the same number of messages as the sensor device is sending on the topic. Upon completion, the display device should disconnect from the broker.
+
+#### Testing the IoT sensor-testing system
+
+Try to start a broker and have the display device and then the sensor device connects. Check that the display device is correctly receiving the temperature-messages published by the sensor device.
+
+The test in the package `no.hvl.dat110.iotsystem.tests` can be used to run the IoT system. When running the test you should see output similar to:
+
+```
+IoT system starting ...
+Starting broker ...
+Broker server : 8080
+Dispatcher running
+.Broker running
+Broker accept [0]
+....Starting display ...
+Display starting ...
+.!0
+?
+Message [type=CONNECT, user=display]
+onConnect:Message [type=CONNECT, user=display]
+Client sessions:1
+Broker accept [0]
+.?
+CreateTopicMsg [topic=temperature]Message [type=CREATETOPIC, user=display]
+onCreateTopic:CreateTopicMsg [topic=temperature]Message [type=CREATETOPIC, user=display]
+Topic : 1
+.?
+SubscribeMsg [topic=temperature]Message [type=SUBSCRIBE, user=display]
+onSubscribe:SubscribeMsg [topic=temperature]Message [type=SUBSCRIBE, user=display]
+Subscribers : temperature : 1
+..Starting sensor ...
+temperature device started
+!0
+?
+READING: 2
+Message [type=CONNECT, user=temperaturesensor]
+onConnect:Message [type=CONNECT, user=temperaturesensor]
+Client sessions:2
+Broker accept [0]
+.?
+PublishMsg [topic=temperature, message=2]Message [type=PUBLISH, user=temperaturesensor]
+onPublish:PublishMsg [topic=temperature, message=2]Message [type=PUBLISH, user=temperaturesensor]
+DISPLAY: 2
+....READING: 20
+.?
+
+[ ... ]
+
+.Display stopping ...
+.?
+UnsubscribeMsg [topic=temperature]Message [type=UNSUBSCRIBE, user=display]
+onUnsubscribe:UnsubscribeMsg [topic=temperature]Message [type=UNSUBSCRIBE, user=display]
+Subscribers : temperature : 0
+.?
+Message [type=DISCONNECT, user=display]
+onDisconnect:Message [type=DISCONNECT, user=display]
+Client sessions:1
+.Temperature device stopping ...
+IoT system stopping ...
+```
+
+### Task D: ChApp - Chat social network  application
+
+The purpose of this task is to connect multiple JavaFX-based GUI clients to a broker, and in this way implement a short messaging system.  The key point is to demonstrate how the publish-subscribe middleware implemented in tasks A and B can be used for very different applications.
+
+The architecture of the chat application system is shown below.
+
+![](assets/markdown-img-paste-20200218140706585.jpg)
+
+The figure below show a screenshot of the client GUI. The chat application client makes it possible to connect to a broker, create/delete topics, subscribe/unsubscribe to topics, and to publish messages on topics.
+
+![](assets/chapp.png)
+
+A video-demonstration of the application can be found here: https://www.youtube.com/watch?v=qGibmzlm0x0&feature=youtu.be
+
+In this task you are not to implement anything, you just need to integrate the chat application client and the middleware from Tasks A and B.
+
+#### Task D.1 Setup JavaFX and PB-MOM
+
+Clone the implementation of the ChApp-client which is available as an Eclipse-project from here:
+
+https://github.com/selabhvl/dat110-project2-chapp.git
+
+If using Java 11 SDK (or later), then you will have to download JavaFX for your platform and then configure the project. For Java 8/9/10 JavaFX is included as part of JDK.
+
+1. Download the 11.0.2 distribution from https://gluonhq.com/products/javafx/ (remember to download for the correct platform - Mac/Linux/Windows)
+
+2. Follow the instructions for JavaFX and Eclipse and non-modular projects: https://openjfx.io/openjfx-docs/#install-javafx (except that you do not need to create a new project as you already have the dat110-project2-chapp project). The main class for the launch configuration is `no.hvl.dat110.chapp.Chapp`
+
+3. In order to compile the chatapp client you *may* in addition have to add the Eclipse project containing your implementation of the PB-MOM middleware to the Build Path of the project for the chat application GUI client.
+
+#### Task D.2 Running the chat application
+
+Start by testing the system by running the broker and two clients on the same machine. The broker will run on the TCP/IP port specified in the class [BrokerServer.java](https://github.com/selabhvl/dat110-project2-startcode/blob/master/src/no/hvl/dat110/broker/BrokerServer.java) and you start the broker server by running the main-method in this class. Try creating topics and then publish some messages.
+
+Next, start a broker on one machine and let each group member run the ChApp-client on their machine. Remeber to use the Configure menu-item in the chat application to correctly set the IP address and port number of the broker.
+
+If you are not able to connect to the broker it may be due to firewall issues on the host running the broker or the client. Make sure that the port on which the broker is running is not blocked by the firewall.
+
+### Task E: Message Buffering
+
+**Please note that you only need to do either task E or Task F - both both. Task E is most likely easier than Task F**
+
+When a client disconnects from the broker, the corresponding `ClientSession-object` is removed from the storage. This means that if the client is subscribing to a topic and messages are published on that topic while the client is disconnected, then the client will not receive the published messages. If the client later reconnects, it will only receive those message that were published after the reconnect.
+
+The aim of this task is to extend the implementation of the broker such that the broker will buffer any messages for a subscribed client until the point where the client connects again. At that point, the broker should then publish the buffered message to the client. Implementing this extension will involve  
+
+- augmenting the broker storage such that buffering of messages for the clients becomes possible. **Hint:** you will need an additional hash-map in Storage.java to store a set of messages for a user that is currently disconnected.
+- changing the implementation of how a connect from a client is handled by the dispatcher.**Hint:** you will have to send any buffered messages to the connecting client.  
+- changing the implementation of how a publish-message from the client is processed by the dispatcher.**Hint:** if a subscribing client is currently disconnected (does not have a session), then the message will have to be buffered.
+
+You may use the ChApp-application or a revised version of the IoT-system to test the buffering implementation; or alternatively write a unit test similar to the ones found in the `no.hvl.dat110.broker.processing.tests` package to create a scenario where a client (subscriber) disconnects for a while and then reconnects.
+
+### Task F: Multi-threaded Broker
+
+**Please not that you only need to do either task E or Task F - both both.**
+
+The implementation of the dispatcher in the `Dispatcher.java` class runs as a single `Stopable`-thread which in turn checks the current client sessions for incoming messages using the `hasData`-method. This means that it is not possible to exploit multiple-cores when running the broker, and this may degrade the performance of the broker as perceived by the clients.
+
+The aim of this task is to change the implementation of the dispatcher such that each client session has an associated thread which processes the incoming message from the corresponding client.
+
+Addressing this task involves:
+
+- creating a new dispatcher-thread in the broker whenever a client connects, i.e., the `waitConnect`-methods in the broker is executed.
+- a dispatcher thread will then wait for incoming messages from the client and handles these accordingly (as before). This means that the doProcess-methods of the dispatcher no longer should iterative across all client-sessions since each dispatcher-thread handles on client.
+- When a client disconnects, i.e, the `onDisconnect`-methods in the dispatcher is invoked, then the corresponding dispatcher thread should be terminated using `doStop()`
+
+It should also be possible to stop/terminate the execution of all current dispatcher-threads. In the current implementation, the single threaded dispatcher can be stopped by invoking the `doStop`-method on the dispatcher.
+
+### Summary
+
+The figure below summarises the implementation with the red boxes indicating classes where you have to write code in order to complete the tasks of the project.
+
+![](assets/markdown-img-paste-20200224093208647.png)
 
 ### Handing in the project
 

@@ -41,7 +41,7 @@ public class Controller  {
 		// loop while reading from sensor and write to display via RPC
 		
 		for(int i = 0; i < 500; i ++) {
-			display.write("" + sensor.read());
+			display.write(sensor.read() + "°");
 			try {
 				Thread.sleep(500);
 			} catch (InterruptedException e) {
